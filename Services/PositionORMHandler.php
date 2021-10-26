@@ -58,7 +58,7 @@ class PositionORMHandler extends PositionHandler
                 $entityClass = $parentEntityClass;
             }
         }
-        
+
         $groups      = $this->getSortableGroupsFieldByEntity($entityClass);
 
         $cacheKey = $this->getCacheKeyForLastPosition($entity, $groups);
@@ -71,12 +71,12 @@ class PositionORMHandler extends PositionHandler
             if ($groups) {
                 $i = 1;
                 foreach ($groups as $groupName) {
-                    $getter = 'get' . $groupName;
+                    $groupValue = $this->getGroupValue($entity, $groupName);
 
-                    if ($entity->$getter()) {
+                    if ($groupValue) {
                         $qb
                             ->andWhere(sprintf('t.%s = :group_%s', $groupName, $i))
-                            ->setParameter(sprintf('group_%s', $i), $entity->$getter())
+                            ->setParameter(sprintf('group_%s', $i), $groupValue)
                         ;
                         $i++;
                     }
@@ -102,10 +102,32 @@ class PositionORMHandler extends PositionHandler
             $getter = 'get' . $groupName;
 
             if ($entity->$getter()) {
-                $cacheKey .= '_' . $entity->$getter()->getId();
+                $cacheKey .= '_' . $this->getGroupValue($entity, $groupName);
             }
         }
 
         return $cacheKey;
+    }
+
+    /**
+     * @param $entity
+     * @param $groupName
+     * @return mixed|null
+     */
+    private function getGroupValue($entity, $groupName)
+    {
+        $getter = 'get' . $groupName;
+
+        if ($entity->$getter()) {
+            if (is_object($entity->$getter()) && method_exists($entity->$getter(), 'getId')) {
+                $groupValue = $entity->$getter()->getId();
+            } else {
+                $groupValue = $entity->$getter();
+            }
+
+            return $groupValue;
+        }
+
+        return null;
     }
 }
